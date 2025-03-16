@@ -22,6 +22,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # 从 commit message 提取版本号
+    - name: Get version from commit message
+      id: get_version
+      run: |
+        message=$(git log -1 --pretty=%B)
+        if [[ $message =~ Build:V[0-9]+\.[0-9]+\.[0-9]+(_?)$ ]]; then
+          echo "version=${BASH_REMATCH[0]}" >> $GITHUB_OUTPUT
+        else
+          echo "version=Build:V0.0.0" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
     # 设置 Node.js 环境
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -61,9 +73,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: ${{ matrix.output }}
-        tag_name: v${{ github.run_number }}
-        name: Release v${{ github.run_number }}
+        tag_name: ${{ steps.get_version.outputs.version }}
+        name: ${{ steps.get_version.outputs.version }}${{ endsWith(steps.get_version.outputs.version, '_') && ' (测试版)' || '' }}
         draft: false
-        prerelease: false
+        prerelease: ${{ endsWith(steps.get_version.outputs.version, '_') }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
