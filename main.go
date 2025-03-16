@@ -69,28 +69,51 @@ func main() {
 
 		switch choice {
 		case "0":
-			authURL, err := authService.GetGithubAuthURL()
-			if err != nil {
-				fmt.Printf(utils.ColorText(utils.Red, "获取授权URL失败: %v\n"), err)
-				continue
-			}
+			fmt.Println(utils.ColorText(utils.Yellow, "\n1. 使用浏览器登录"))
+			fmt.Println(utils.ColorText(utils.Yellow, "2. 直接粘贴 Cookie"))
+			fmt.Print(utils.ColorText(utils.Purple, "请选择登录方式 (1-2): "))
 
-			if err := authService.OpenBrowser(authURL); err != nil {
-				fmt.Printf(utils.ColorText(utils.Yellow, "无法自动打开浏览器，请手动访问以下链接：\n%s\n"), authURL)
-			}
+			loginChoice, _ := reader.ReadString('\n')
+			loginChoice = strings.TrimSpace(loginChoice)
 
-			fmt.Print(utils.ColorText(utils.Cyan, "\n请将授权完成后的回调URL粘贴到这里: "))
-			callbackURL, _ := reader.ReadString('\n')
-			callbackURL = strings.TrimSpace(callbackURL)
+			switch loginChoice {
+			case "1":
+				// 使用固定的 Github 授权 URL
+				authURL := "https://github.com/login/oauth/authorize?response_type=code&redirect_uri=https%3A%2F%2Fbd.bangbang93.com%2Fcallback%2Flogin%2Fgithub&client_id=03132c1f1a1d46e078ea"
 
-			if code := authService.ExtractCode(callbackURL); code != "" {
-				fmt.Printf(utils.ColorText(utils.Green, "授权码: %s\n"), code)
-
-				if err := authService.VerifyCode(code); err != nil {
-					fmt.Println(utils.ColorText(utils.Red, fmt.Sprintf("❌ 验证失败: %v", err)))
+				if err := authService.OpenBrowser(authURL); err != nil {
+					fmt.Printf(utils.ColorText(utils.Yellow, "无法自动打开浏览器，请手动访问以下链接：\n%s\n"), authURL)
 				}
-			} else {
-				fmt.Println(utils.ColorText(utils.Red, "❌ 无法获取授权码，请重试"))
+
+				fmt.Print(utils.ColorText(utils.Cyan, "\n请将授权完成后的回调URL粘贴到这里: "))
+				callbackURL, _ := reader.ReadString('\n')
+				callbackURL = strings.TrimSpace(callbackURL)
+
+				if code := authService.ExtractCode(callbackURL); code != "" {
+					// 直接使用回调URL进行验证
+					if err := authService.VerifyCallback(callbackURL); err != nil {
+						fmt.Println(utils.ColorText(utils.Red, fmt.Sprintf("❌ 验证失败: %v", err)))
+					} else {
+						fmt.Println(utils.ColorText(utils.Green, "✓ 登录成功！"))
+					}
+				} else {
+					fmt.Println(utils.ColorText(utils.Red, "❌ 无法获取授权码，请重试"))
+				}
+
+			case "2":
+				fmt.Println(utils.ColorText(utils.Yellow, "\n请从浏览器复制 Cookie 并粘贴到这里:"))
+				fmt.Println(utils.ColorText(utils.Blue, "提示: 在浏览器中登录后，按 F12 打开开发者工具，在 Network 标签页中找到请求，复制 Cookie"))
+				cookieStr, _ := reader.ReadString('\n')
+				cookieStr = strings.TrimSpace(cookieStr)
+
+				if err := authService.SaveBrowserCookies(cookieStr); err != nil {
+					fmt.Println(utils.ColorText(utils.Red, fmt.Sprintf("❌ 保存 Cookie 失败: %v", err)))
+				} else {
+					fmt.Println(utils.ColorText(utils.Green, "✓ 登录成功！"))
+				}
+
+			default:
+				fmt.Println(utils.ColorText(utils.Red, "❌ 无效的选择"))
 			}
 
 			fmt.Print(utils.ColorText(utils.Yellow, "\n按回车键继续..."))

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/MoTeam-org/OpenBMCLAPI-API-Go/models"
 	"github.com/MoTeam-org/OpenBMCLAPI-API-Go/utils"
@@ -95,12 +96,9 @@ func (s *AuthService) OpenBrowser(url string) error {
 	return err
 }
 
+// ExtractCode 从回调URL中提取授权码
 func (s *AuthService) ExtractCode(callbackURL string) string {
-	code := s.parseCode(callbackURL)
-	if code != "" {
-		fmt.Println(utils.ColorText(utils.Green, "✓ 成功获取授权码"))
-	}
-	return code
+	return s.parseCode(callbackURL)
 }
 
 // 新增一个辅助函数来解析code
@@ -117,6 +115,7 @@ func (s *AuthService) parseCode(callbackURL string) string {
 }
 
 func (s *AuthService) VerifyCode(code string) error {
+	// 使用原来的 URL 路径
 	url := fmt.Sprintf("https://bd.bangbang93.com/openbmclapi/user/auth/github?code=%s", code)
 	client := utils.NewHTTPClient()
 	respBody, err := client.DoGet(url, nil)
@@ -219,4 +218,77 @@ func (s *AuthService) GetUserProfile() (*models.UserProfile, error) {
 	}
 
 	return &profile, nil
+}
+
+// VerifyCallback 使用完整的回调URL进行验证
+func (s *AuthService) VerifyCallback(callbackURL string) error {
+	code := s.ExtractCode(callbackURL)
+	if code == "" {
+		return fmt.Errorf("无效的回调URL")
+	}
+
+	// 显示请求状态
+	fmt.Print(utils.ColorText(utils.Yellow, "\r验证状态: 准备请求中"))
+	time.Sleep(500 * time.Millisecond) // 添加短暂延迟使状态变化可见
+
+	fmt.Print(utils.ColorText(utils.Yellow, "\r验证状态: 正在请求中"))
+
+	// 使用已有的 VerifyCode 方法进行验证
+	err := s.VerifyCode(code)
+	if err != nil {
+		fmt.Print(utils.ColorText(utils.Red, "\r验证状态: 请求失败    \n")) // 添加额外空格确保覆盖之前的状态
+		return err
+	}
+
+	fmt.Print("\r" + strings.Repeat(" ", 40) + "\r") // 清除状态行
+	return nil
+}
+
+// SaveBrowserCookies 保存从浏览器复制的 cookie 字符串
+func (s *AuthService) SaveBrowserCookies(cookieStr string) error {
+	// 分割多个 cookie
+	cookieStrings := strings.Split(cookieStr, ";")
+	var cookieList []models.Cookie
+
+	// 解析每个 cookie
+	for _, str := range cookieStrings {
+		str = strings.TrimSpace(str)
+		if str == "" {
+			continue
+		}
+
+		parts := strings.SplitN(str, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		cookie := &models.Cookie{
+			Name:  strings.TrimSpace(parts[0]),
+			Value: strings.TrimSpace(parts[1]),
+		}
+		cookieList = append(cookieList, *cookie)
+	}
+
+	if len(cookieList) == 0 {
+		return fmt.Errorf("未找到有效的 Cookie")
+	}
+
+	// 确保目录存在
+	dir := filepath.Dir("cookie.json")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建目录失败: %v", err)
+	}
+
+	// 将 cookies 写入文件
+	cookieData, err := json.MarshalIndent(cookieList, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化 Cookie 失败: %v", err)
+	}
+
+	if err := ioutil.WriteFile("cookie.json", cookieData, 0644); err != nil {
+		return fmt.Errorf("保存 Cookie 失败: %v", err)
+	}
+
+	fmt.Println(utils.ColorText(utils.Green, "✓ Cookie 已保存"))
+	return nil
 }
