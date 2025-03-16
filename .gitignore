@@ -1,0 +1,41 @@
+# 依赖目录
+node_modules/
+web/node_modules/
+
+# 构建输出
+dist/
+web/dist/
+service/web/dist/
+
+# IDE 配置
+.idea/
+.vscode/
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Go 编译文件
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+
+# 其他
+coverage/
+.coverage
+.nyc_output 
