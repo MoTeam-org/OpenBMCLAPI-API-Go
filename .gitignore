@@ -33,7 +33,15 @@ Thumbs.db
 # 环境配置
 .env
 .env.local
+*.json
 .env.*.local
+
+# 敏感文件
+cookie.json
+config.json
+secrets.json
+*.key
+*.pem
 
 # 其他
 coverage/
