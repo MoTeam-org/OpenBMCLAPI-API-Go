@@ -33,10 +33,9 @@ Thumbs.db
 # 环境配置
 .env
 .env.local
-*.json
 .env.*.local
 
-# 敏感文件
+# 敏感文件和配置
 cookie.json
 config.json
 secrets.json
