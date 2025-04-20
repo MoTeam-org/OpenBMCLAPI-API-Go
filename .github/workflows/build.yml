@@ -39,13 +39,25 @@ jobs:
       id: get_version
       run: |
         message=$(git log -1 --pretty=%B)
-        if [[ $message =~ Build:V[0-9]+\.[0-9]+\.[0-9]+(_?)$ ]]; then
-          version=${BASH_REMATCH[0]}
+        if [[ $message =~ Build:V([0-9]+\.[0-9]+\.[0-9]+)(_?)$ ]]; then
+          version="${BASH_REMATCH[1]}"
+          is_test="${BASH_REMATCH[2]}"
+          if [ "$is_test" == "_" ]; then
+            tag="v${version}-beta"
+            release_name="v${version} Beta"
+          else
+            tag="v${version}"
+            release_name="v${version}"
+          fi
         else
-          version="Build:V0.0.1"
+          tag="v0.0.1"
+          release_name="v0.0.1"
         fi
-        echo "VERSION=$version" >> $GITHUB_ENV
-        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "VERSION=${version}" >> $GITHUB_ENV
+        echo "TAG=${tag}" >> $GITHUB_ENV
+        echo "RELEASE_NAME=${release_name}" >> $GITHUB_ENV
+        echo "version=${version}" >> $GITHUB_OUTPUT
+        echo "tag=${tag}" >> $GITHUB_OUTPUT
 
     # 安装前端依赖并构建
     - name: Build Frontend
@@ -59,8 +71,8 @@ jobs:
     - name: Build Go Binary
       run: |
         go mod tidy
-        GOOS=windows GOARCH=amd64 go build -v -o OBA-BD-${{ env.VERSION }}.exe
-        GOOS=linux GOARCH=amd64 go build -v -o OBA-BD-${{ env.VERSION }}-linux
+        GOOS=windows GOARCH=amd64 go build -v -o OBA-BD-${{ env.TAG }}.exe
+        GOOS=linux GOARCH=amd64 go build -v -o OBA-BD-${{ env.TAG }}-linux
 
     # 创建 Release
     - name: Create Release
@@ -68,12 +80,12 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          OBA-BD-${{ env.VERSION }}.exe
-          OBA-BD-${{ env.VERSION }}-linux
-        tag_name: ${{ env.VERSION }}
-        name: Release ${{ env.VERSION }}${{ endsWith(env.VERSION, '_') && ' (测试版)' || '' }}
+          OBA-BD-${{ env.TAG }}.exe
+          OBA-BD-${{ env.TAG }}-linux
+        tag_name: ${{ env.TAG }}
+        name: Release ${{ env.RELEASE_NAME }}
         draft: false
-        prerelease: ${{ endsWith(env.VERSION, '_') }}
+        prerelease: ${{ contains(env.TAG, '-beta') }}
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
