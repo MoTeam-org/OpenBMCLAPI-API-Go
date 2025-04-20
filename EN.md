@@ -117,6 +117,27 @@ Launch with debug flags:
 4. Push to the branch
 5. Create a Pull Request
 
+## 🔒 Security
+
+### Vulnerability Scanning
+- The project uses GitHub's Dependabot for automated security updates
+- Regular security scans for dependencies
+- Immediate patches for critical vulnerabilities
+- Security advisories through GitHub Security tab
+
+### Security Best Practices
+- Regular dependency updates
+- Code scanning enabled
+- Secure authentication implementation
+- Protected API endpoints
+
+### Reporting Security Issues
+If you discover a security vulnerability, please:
+1. **DO NOT** open a public issue
+2. Follow our [Security Policy](SECURITY.md)
+3. Report it through GitHub's Security Advisory feature
+4. Or email us directly at [security contact]
+
 ## 📄 License
 
 MIT License - see the [LICENSE](LICENSE) file for details 

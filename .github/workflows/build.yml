@@ -6,12 +6,21 @@ on:
   pull_request:
     branches: [ main ]
 
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整的 git 历史用于版本号提取
 
     # 设置 Node.js 环境
     - name: Set up Node.js
@@ -31,10 +40,12 @@ jobs:
       run: |
         message=$(git log -1 --pretty=%B)
         if [[ $message =~ Build:V[0-9]+\.[0-9]+\.[0-9]+(_?)$ ]]; then
-          echo "version=${BASH_REMATCH[0]}" >> $GITHUB_OUTPUT
+          version=${BASH_REMATCH[0]}
         else
-          echo "version=Build:V0.0.0" >> $GITHUB_OUTPUT
+          version="Build:V0.0.1"
         fi
+        echo "VERSION=$version" >> $GITHUB_ENV
+        echo "version=$version" >> $GITHUB_OUTPUT
 
     # 安装前端依赖并构建
     - name: Build Frontend
@@ -48,17 +59,21 @@ jobs:
     - name: Build Go Binary
       run: |
         go mod tidy
-        go build -v -o openbmclapi
+        GOOS=windows GOARCH=amd64 go build -v -o OBA-BD-${{ env.VERSION }}.exe
+        GOOS=linux GOARCH=amd64 go build -v -o OBA-BD-${{ env.VERSION }}-linux
 
     # 创建 Release
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
-        files: openbmclapi
-        tag_name: ${{ steps.get_version.outputs.version }}
-        name: ${{ steps.get_version.outputs.version }}${{ endsWith(steps.get_version.outputs.version, '_') && ' (测试版)' || '' }}
+        files: |
+          OBA-BD-${{ env.VERSION }}.exe
+          OBA-BD-${{ env.VERSION }}-linux
+        tag_name: ${{ env.VERSION }}
+        name: Release ${{ env.VERSION }}${{ endsWith(env.VERSION, '_') && ' (测试版)' || '' }}
         draft: false
-        prerelease: ${{ endsWith(steps.get_version.outputs.version, '_') }}
+        prerelease: ${{ endsWith(env.VERSION, '_') }}
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
